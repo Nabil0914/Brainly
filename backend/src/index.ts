@@ -1,6 +1,7 @@
 import express, { response } from 'express';
 import jwt from 'jsonwebtoken';
 import bycrypt from 'bcrypt';
+import { z } from 'zod';
 import { Content, User } from './models/db';
 import { userMiddleware } from './middlwares/middleware'
 import { JWT_PASSWORD, PORT } from './config/config';
@@ -9,13 +10,29 @@ import { JWT_PASSWORD, PORT } from './config/config';
 const app = express();
 app.use(express.json());
 
+const signupSchema = z.object({
+    username: z.string().min(3).max(10),
+    password: z.string().min(8).max(20).regex(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/,
+        "Password must include at least one uppercase letter, one lowercase letter, one number, and one special character.")
+})
 
 
 app.post('/api/v1/signup', async function (req, res) {
     //To add: Zod Validation and bycrypt(password hash), enum response 
-    const username = req.body.username;
-    const password = req.body.password;
+    // const username = req.body.username;
+    // const password = req.body.password;
 
+    const parsed = signupSchema.safeParse(req.body);
+
+    if(!parsed.success){
+        res.status(411).json({
+            message: "Invalid inputs"
+        });
+        return;
+    }
+
+    const { username, password } = parsed.data;
     const hashedPassword = await bycrypt.hash(password, 5);
 
     try{
@@ -35,9 +52,25 @@ app.post('/api/v1/signup', async function (req, res) {
 
 })
 
+const signinSchema = z.object({
+    username: z.string().min(3, "Username is too short").max(20, "Username is too long"),
+    password: z.string().min(1, "Password is required")
+})
+
 app.post('/api/v1/signin', async function (req, res) {
-    const username = req.body.username
-    const password = req.body.password
+    // const username = req.body.username
+    // const password = req.body.password
+
+    const parsedInput = signinSchema.safeParse(req.body);
+
+    if(!parsedInput.success){
+        res.status(403).json({
+            message: "Invalid input"
+        })
+        return;
+    }
+
+    const {username, password} = parsedInput.data;
 
     const existingUser = await User.findOne({
         username,
