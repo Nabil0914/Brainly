@@ -1,6 +1,6 @@
 import express, { response } from 'express';
 import jwt from 'jsonwebtoken';
-import bycrypt from 'bcrypt';
+import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import { Content, User } from './models/db';
 import { userMiddleware } from './middlwares/middleware'
@@ -9,6 +9,16 @@ import { JWT_PASSWORD, PORT } from './config/config';
 
 const app = express();
 app.use(express.json());
+
+enum ResponseStatus {
+    SUCCESS = 200,
+    INVALID_INPUT = 411,
+    INVALID_CREDENTIALS = 401,
+    USER_NOT_FOUND = 404,
+    USER_EXISTS = 403,
+    SERVER_ERROR = 500 
+}
+
 
 const signupSchema = z.object({
     username: z.string().min(3).max(10),
@@ -26,31 +36,44 @@ app.post('/api/v1/signup', async function (req, res) {
     const parsed = signupSchema.safeParse(req.body);
 
     if(!parsed.success){
-        res.status(411).json({
+        res.status(ResponseStatus.INVALID_INPUT).json({
             message: "Invalid inputs"
         });
         return;
     }
 
     const { username, password } = parsed.data;
-    const hashedPassword = await bycrypt.hash(password, 5);
+
 
     try{
+
+        const existingUser = await User.findOne({
+            username
+        });
+
+        if(existingUser){
+            return res.status(ResponseStatus.USER_EXISTS).json({
+                message: "User already exists with this username"
+            })
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 5);
+
         await User.create({
         username: username,
         password: hashedPassword
-    })
-
-    res.json({
-        message: "You're logged in"
-    })
+    });
+    
+    return res.status(ResponseStatus.SUCCESS).json({
+        message: "Signed up successfully"
+    });
     } catch(e){
-        res.status(411).json({
-            message: "User already exist"
-        })
+        return res.status(ResponseStatus.SERVER_ERROR).json({
+            message: "Server error"
+        });
     }
 
-})
+});
 
 const signinSchema = z.object({
     username: z.string().min(3, "Username is too short").max(20, "Username is too long"),
@@ -64,7 +87,7 @@ app.post('/api/v1/signin', async function (req, res) {
     const parsedInput = signinSchema.safeParse(req.body);
 
     if(!parsedInput.success){
-        res.status(403).json({
+        res.status(ResponseStatus.INVALID_INPUT).json({
             message: "Invalid input"
         })
         return;
@@ -72,33 +95,41 @@ app.post('/api/v1/signin', async function (req, res) {
 
     const {username, password} = parsedInput.data;
 
-    const existingUser = await User.findOne({
+    try{
+        const existingUser = await User.findOne({
         username,
     })
 
     if(!existingUser){
-        res.status(403).json({
+        return res.status(ResponseStatus.USER_NOT_FOUND).json({
             message: "User doesn't exist!"
         })
-        return
     }
 
-    const passwordMatch = await bycrypt.compare(password, existingUser.password);
+    const passwordMatch = await bcrypt.compare(password, existingUser.password);
 
-    if(passwordMatch){
-        const token = jwt.sign({
-            id: existingUser._id
-        }, JWT_PASSWORD)
-
-        res.json({
-            token
-        })
-    } else {
-        res.status(403).json({
+    if(!passwordMatch){
+        return res.status(ResponseStatus.INVALID_CREDENTIALS).json({
             message: "Incorrect Credentials"
         })
     }
+
+    const token = jwt.sign({
+        id: existingUser._id
+    }, JWT_PASSWORD)
+
+
+    return res.status(ResponseStatus.SUCCESS).json({
+        message: "Signin Successful",
+        token
+    })
+    } catch(e){
+        return res.status(ResponseStatus.SERVER_ERROR).json({
+            message: "Something went wrong. Please try again later."
+        })
+    }
 })
+
 
 app.post('/api/v1/content', userMiddleware,  async (req, res) => {
     const link = req.body.link;
