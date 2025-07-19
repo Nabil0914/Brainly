@@ -1,5 +1,6 @@
-import express from 'express';
+import express, { response } from 'express';
 import jwt from 'jsonwebtoken';
+import bycrypt from 'bcrypt';
 import { Content, User } from './models/db';
 import { userMiddleware } from './middlwares/middleware'
 import { JWT_PASSWORD, PORT } from './config/config';
@@ -15,10 +16,12 @@ app.post('/api/v1/signup', async function (req, res) {
     const username = req.body.username;
     const password = req.body.password;
 
+    const hashedPassword = await bycrypt.hash(password, 5);
+
     try{
         await User.create({
         username: username,
-        password: password
+        password: hashedPassword
     })
 
     res.json({
@@ -38,10 +41,18 @@ app.post('/api/v1/signin', async function (req, res) {
 
     const existingUser = await User.findOne({
         username,
-        password
     })
 
-    if(existingUser){
+    if(!existingUser){
+        res.status(403).json({
+            message: "User doesn't exist!"
+        })
+        return
+    }
+
+    const passwordMatch = await bycrypt.compare(password, existingUser.password);
+
+    if(passwordMatch){
         const token = jwt.sign({
             id: existingUser._id
         }, JWT_PASSWORD)
