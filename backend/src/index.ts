@@ -1,10 +1,11 @@
 import express, { response } from 'express';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
+import bcrypt, { hash } from 'bcrypt';
 import { z } from 'zod';
-import { Content, User } from './models/db';
+import { Content, Links, User } from './models/db';
 import { userMiddleware } from './middlwares/middleware'
 import { JWT_PASSWORD, PORT } from './config/config';
+import { random } from './utility/util';
 
 
 const app = express();
@@ -178,12 +179,79 @@ app.delete('/api/v1/content', userMiddleware, async (req, res) => {
 
 })
 
-// app.post('/api/v1/brain/share', (req, res) => {
+app.post('/api/v1/brain/share', userMiddleware, async (req, res) => {
+    const share = req.body.share;
 
-// })
+    if(share){
+        const existingLink = await Links.findOne({
+            // @ts-ignore
+            userId: req.userId
+        })
 
-// app.get('/api/v1/brain/:shareLink', (req, res) => {
+        if(existingLink){
+            return res.json({
+                hash: existingLink.hash
+            })
+        }
 
-// })
+        const hash = random(11);
+        await Links.create({
+            //@ts-ignore
+            userId: req.userId,
+            hash: hash
+        })
+
+        res.json({
+        message: "/share/" + hash,
+    })
+    }
+    else {
+        await Links.deleteOne({
+            // @ts-ignore
+            userId: req.userId
+        })
+
+        res.json({
+        message: "Link Removed",
+    })
+    }
+
+    
+})
+
+app.get('/api/v1/brain/:shareLink', async (req, res) => {
+    const hash = req.params.shareLink;
+
+    const link = await Links.findOne({
+        hash
+    })
+
+    if(!link){
+       return res.status(ResponseStatus.INVALID_INPUT).json({
+            message: "Invalid Inputs"
+        })
+    } 
+
+    //userId
+    const content = await Content.findOne({
+        userId: link.userId
+    })
+
+    const user = await User.findOne({
+        _id: link.userId
+    })
+
+    if(!user){
+        return res.status(ResponseStatus.USER_NOT_FOUND).json({
+            message: "User not found"
+        })
+    }
+
+    res.json({
+        username: user.username,
+        content: content
+    })
+
+})
 
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));

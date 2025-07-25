@@ -1,5 +1,5 @@
 // import 'dotenv/config'
-import mongoose, { model, Mongoose, Types } from 'mongoose'
+import mongoose, { model, mongo, Mongoose, Types } from 'mongoose'
 import { MONGO_URI} from '../config/config';
 mongoose.connect(MONGO_URI);
 
@@ -49,3 +49,14 @@ const contentSchema = new mongoose.Schema({
 }, { timestamps: true})
 
 export const Content = mongoose.model("Content", contentSchema);
+
+const linkSchema = new mongoose.Schema({
+    hash: String,
+    userId: {
+        type: mongoose.Types.ObjectId,
+        ref: 'User',
+        required: true
+    }
+})
+
+export const Links = mongoose.model("Links", linkSchema);
