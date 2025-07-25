@@ -12,7 +12,11 @@ function App() {
       <Button variant='primary' text='Add Content' startIcon={<PlusIcon />}/>
       <Button variant='secondary' text='Share Brain' startIcon={<ShareIcon />}/>
 
-      <Card />
+      <div className="flex gap-6">
+        <Card type='youtube' title='Surah Yaseen' link='https://www.youtube.com/watch?v=Q--H5uqHP5s' />
+        <Card type='twitter' title='DK' link='https://x.com/merishabh_singh/status/1948774653469630578'/>
+      </div>
+      
     </div>
   )
 }
