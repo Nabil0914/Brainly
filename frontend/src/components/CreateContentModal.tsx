@@ -1,5 +1,7 @@
 import { CloseIcon } from "../icons/CloseIcon";
 import { Button } from "./Button";
+import { Input } from "./Input";
+
 
 export function CreateContentModal({open, onClose}: {open: boolean, onClose: () => void }){
     return <div>
@@ -30,8 +32,3 @@ export function CreateContentModal({open, onClose}: {open: boolean, onClose: () 
     </div>
 }
 
-function Input ({onChange, placeholder}: {onChange: () => void, placeholder: string}){
-    return <div>
-        <input placeholder={placeholder} type={"text"} onChange={onChange} className="w-full px-4 py-2 border border-gray-300 rounded  focus:outline-none focus:ring-2 focus:ring-blue-400"></input>
-    </div>
-}
