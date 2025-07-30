@@ -6,10 +6,12 @@ import { Content, Links, User } from './models/db';
 import { userMiddleware } from './middlwares/middleware'
 import { JWT_PASSWORD, PORT } from './config/config';
 import { random } from './utility/util';
+import cors from 'cors'
 
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
 enum ResponseStatus {
     SUCCESS = 200,
