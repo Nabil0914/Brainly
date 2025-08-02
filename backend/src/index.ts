@@ -142,7 +142,6 @@ app.post('/api/v1/content', userMiddleware,  async (req, res) => {
         link,
         type,
         title: req.body.title,
-        // @ts-ignore
         userId : req.userId,
         tags : []
     })
@@ -154,7 +153,7 @@ app.post('/api/v1/content', userMiddleware,  async (req, res) => {
 })
 
 app.get('/api/v1/content', userMiddleware, async (req, res) => {
-    // @ts-ignore
+    
     const userId = req.userId;
 
     const content = await Content.find({
